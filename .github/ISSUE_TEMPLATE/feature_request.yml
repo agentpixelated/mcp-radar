@@ -1,0 +1,65 @@
+name: Feature request
+description: Propose a focused improvement to MCP Radar
+title: "feat: "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        MCP Radar aims to remain small, deterministic, explainable, and security-focused. Describe the concrete workflow before proposing an implementation.
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: What user or security problem is difficult today?
+      placeholder: Describe the workflow and why the current commands are insufficient.
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed behavior
+      description: What should MCP Radar do, and what should the CLI or output look like?
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: What workarounds or simpler designs have you considered?
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - MCP compatibility
+        - Lockfile format
+        - Drift reporting
+        - Risk hints
+        - Runtime sandboxing
+        - CI and GitHub integration
+        - Documentation
+        - Other
+    validations:
+      required: true
+
+  - type: textarea
+    id: security
+    attributes:
+      label: Security and determinism impact
+      description: Could this add side effects, nondeterminism, secret handling, network access, or compatibility risk?
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Checks
+      options:
+        - label: I searched existing issues and pull requests for a similar proposal.
+          required: true
+        - label: This request does not contain secrets or private MCP configuration.
+          required: true

@@ -1,46 +1,86 @@
-# mcp-radar
+# MCP Radar
 
-**Know exactly what changed before trusting an updated MCP server.**
+[![CI](https://github.com/agentpixelated/mcp-radar/actions/workflows/ci.yml/badge.svg)](https://github.com/agentpixelated/mcp-radar/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+[![Status: experimental](https://img.shields.io/badge/status-experimental-orange.svg)](#project-status)
 
-`mcp-radar` creates behavior lockfiles for Model Context Protocol servers. It launches a stdio server, performs the MCP initialization lifecycle, records its advertised capabilities and schemas, and fails CI when that behavior drifts.
+> **Behavior lockfiles and supply-chain drift detection for MCP servers.**
 
-> Status: experimental v0.1. Review the lockfile and risk report; this tool does not sandbox tool execution or prove a server is safe.
+MCP Radar snapshots the behavior an MCP server advertises, stores it in a deterministic lockfile, and tells you exactly what changed after an update.
 
-## Why
+```text
+MCP server ──snapshot──> mcp-radar.lock.json
+     │                         │
+     └────── update ───────────┘
+                               │
+                         verify / diff
+                               │
+                    clean ✓  or  drift ⚠
+```
 
-An MCP package can keep the same name while adding a new tool, broadening an input schema, changing its instructions, or exposing new resources. Traditional dependency lockfiles pin package bytes. `mcp-radar` locks the interface your agent is being asked to trust.
+Use it to review new tools, broader schemas, changed instructions, added resources, and other interface changes **before** an updated server reaches your agent or CI environment.
 
-## Install
+> [!IMPORTANT]
+> MCP Radar v0.1 fingerprints advertised MCP behavior. It does not execute tools, sandbox the server, or prove that a server is safe.
+
+## Why MCP Radar?
+
+Package versions and checksums tell you which bytes changed. They do not explain how the interface exposed to your agent changed.
+
+An MCP server can keep the same package name while it:
+
+- adds a command-execution tool;
+- broadens a filesystem path schema;
+- changes tool descriptions or server instructions;
+- exposes new prompts, resources, or templates;
+- negotiates a different protocol or capability set.
+
+MCP Radar turns those changes into a reviewable, version-controlled artifact.
+
+## Quick start
+
+Install the CLI:
 
 ```bash
 go install github.com/agentpixelated/mcp-radar/cmd/mcp-radar@latest
 ```
 
-Or build from source:
-
-```bash
-go build -o mcp-radar ./cmd/mcp-radar
-```
-
-## Quick start
-
-Create an approved behavior snapshot:
+Approve the current behavior of a stdio MCP server:
 
 ```bash
 mcp-radar approve -- npx -y @modelcontextprotocol/server-filesystem "$PWD"
 ```
 
-Verify it later using the invocation stored in the lockfile:
+Commit the generated baseline:
+
+```text
+mcp-radar.lock.json
+```
+
+Verify the server later using the invocation stored in that lockfile:
 
 ```bash
 mcp-radar verify
 ```
 
-A clean verification exits `0`. Drift exits `1`, making it suitable for CI.
+A clean verification exits `0`. Behavior drift exits `1`, which makes the command CI-friendly.
 
-## See the drift detector locally
+## What it detects
 
-This repository includes a tiny mock MCP server:
+| Surface | Examples of detected drift |
+| --- | --- |
+| Server | protocol version, implementation metadata, capabilities, instructions |
+| Tools | added or removed tools, changed descriptions, schemas, annotations, metadata |
+| Prompts | additions, removals, and definition changes |
+| Resources | additions, removals, URI or metadata changes |
+| Resource templates | additions, removals, and definition changes |
+| Risk hints | deterministic categories for tools that advertise sensitive behavior |
+
+Every advertised item receives a SHA-256 hash. MCP Radar also produces one aggregate behavior fingerprint for the server.
+
+## Example drift report
+
+This repository includes a small mock MCP server for local testing:
 
 ```bash
 go build -o ./mcp-radar ./cmd/mcp-radar
@@ -51,7 +91,7 @@ go build -o ./mock-server ./examples/mock-server
 ./mcp-radar diff v1.lock.json v2.lock.json
 ```
 
-Expected report:
+Expected output:
 
 ```text
 ⚠ MCP behavior drift detected
@@ -72,63 +112,85 @@ mcp-radar verify   [flags] [-- <server-command> [args...]]
 mcp-radar diff <approved.lock.json> <candidate.lock.json>
 ```
 
-- `snapshot` writes a candidate lockfile.
-- `approve` writes the trusted baseline.
-- `verify` captures current behavior and compares it with the baseline.
+- `snapshot` writes a candidate lockfile without treating it as approved.
+- `approve` writes or replaces the trusted baseline.
+- `verify` snapshots current behavior and compares it with the approved baseline.
 - `diff` compares two existing lockfiles without launching a server.
 
-Useful flags:
+Common flags:
 
 ```text
---lock PATH          lockfile path (default mcp-radar.lock.json)
---protocol VERSION   requested MCP protocol version (default 2025-11-25)
---timeout DURATION   overall discovery timeout (default 15s)
+--lock PATH          lockfile path (default: mcp-radar.lock.json)
+--protocol VERSION   requested MCP protocol version (default: 2025-11-25)
+--timeout DURATION   overall discovery timeout (default: 15s)
 --env KEY=VALUE      child-process environment override; repeatable
 ```
 
-Environment values are never stored in the lockfile.
+Environment **values** are never stored in the lockfile. Only explicitly supplied key names are recorded so the server can be launched consistently.
 
-## What v0.1 fingerprints
+## Exit codes
 
-- negotiated protocol version;
-- server metadata, capabilities, and instructions;
-- tool names, descriptions, input/output schemas, annotations, and metadata;
-- prompts;
-- resources and resource templates;
-- deterministic per-item SHA-256 hashes and an aggregate fingerprint;
-- explainable tool-risk categories.
+| Code | Meaning |
+| ---: | --- |
+| `0` | verification is clean, or the requested operation completed successfully |
+| `1` | behavior drift was detected |
+| `2` | the command could not complete because of invalid input, launch failure, timeout, or another operational error |
 
-The server's advertised lists are discovered but tools are **not invoked**.
+## CI usage
 
-## CI example
-
-Commit `mcp-radar.lock.json`, install the CLI, and verify:
+Commit `mcp-radar.lock.json` beside your project, install MCP Radar, and verify the server during pull requests:
 
 ```yaml
-- name: Install mcp-radar
+- name: Install MCP Radar
   run: go install github.com/agentpixelated/mcp-radar/cmd/mcp-radar@latest
 
 - name: Verify MCP behavior
   run: mcp-radar verify
 ```
 
-For servers that need secrets, inject them in CI and pass them using `--env`; only key names are recorded.
+For servers that require credentials, inject secrets through your CI provider and pass them with `--env`. Never commit secret values to the lockfile or workflow.
 
-## Security model and limits
+## Trust model
 
-`mcp-radar` detects changes in advertised MCP behavior. It does not currently observe filesystem access, network calls, subprocesses, runtime side effects, or behavior hidden behind unchanged schemas. Those runtime controls are planned for a later sandboxed release.
+MCP Radar answers one focused question:
+
+> **Did the behavior advertised through MCP change?**
+
+It does **not** currently observe hidden runtime behavior such as filesystem reads, network requests, subprocess execution, environment access, or side effects behind an unchanged schema. See the [threat model](docs/threat-model.md) for the exact trust boundary.
 
 Risk scores are deterministic review hints, not vulnerability verdicts.
 
-See [the lockfile specification](docs/lockfile.md).
+## Lockfile design
 
-## Roadmap
+The lockfile is designed to be:
 
-- v0.1: stdio discovery, deterministic lockfiles, diff, verify, risk hints
-- v0.2: sandboxed runtime canaries for filesystem, process, environment, and network access
-- v0.3: reusable GitHub Action and review annotations
-- v0.4: signed attestations and organization policy
+- deterministic and suitable for version control;
+- readable enough for human review;
+- strict about incompatible format versions;
+- free of timestamps and secret values;
+- stable when only the local executable path changes.
+
+See the [lockfile format](docs/lockfile.md) for field and compatibility details.
+
+## Project status
+
+MCP Radar is an experimental v0.1 project. The current release focuses on a small, auditable CLI and stdio MCP discovery.
+
+Planned direction:
+
+- **v0.1** — stdio discovery, deterministic lockfiles, diff, verify, and risk hints;
+- **v0.2** — sandboxed runtime canaries for filesystem, process, environment, and network access;
+- **v0.3** — reusable GitHub Action and pull-request annotations;
+- **v0.4** — signed attestations and organization-level policy.
+
+The roadmap describes intent, not guaranteed release dates.
+
+## Contributing
+
+Bug reports, threat-model feedback, compatibility findings, and focused pull requests are welcome. Read [CONTRIBUTING.md](CONTRIBUTING.md) before opening a change.
+
+For suspected vulnerabilities, follow [SECURITY.md](SECURITY.md) and avoid public disclosure until a fix is available.
 
 ## License
 
-MIT
+MCP Radar is available under the [MIT License](LICENSE).
