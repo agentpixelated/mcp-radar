@@ -1,7 +1,12 @@
 [project]
 name = "mcp-radar-experiments"
-version = "0.0.0"
+version = "0.1.0"
+description = "Incubating developer-tool experiments, including the Hermes Exec Fuse plugin."
+readme = "README.md"
 requires-python = ">=3.10"
+license = { text = "MIT" }
+authors = [{ name = "agentpixelated" }]
+dependencies = []
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
