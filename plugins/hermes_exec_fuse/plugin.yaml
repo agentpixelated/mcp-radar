@@ -1,6 +1,6 @@
 name: hermes-exec-fuse
-version: 0.1.0
-description: Batch independent terminal commands, reuse safe results, and prevent redundant tool calls.
+version: "0.1.0"
+description: Safely batch foreground terminal commands, reuse exact read-only results, prevent redundant calls, and compact tool output.
 author: agentpixelated
 provides_tools:
   - exec_fuse
