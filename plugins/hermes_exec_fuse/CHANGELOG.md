@@ -13,6 +13,10 @@ The project follows [Semantic Versioning](https://semver.org/) while it is distr
 - Clarified all manifest, tool-schema, hook, and runtime descriptions.
 - Improved CI naming, cancellation, compilation checks, and Python matrix visibility.
 
+### Fixed
+
+- Failed direct read-only terminal results are recorded in metrics but no longer inserted into the reuse cache.
+
 ## 0.1.0 — 2026-07-22
 
 ### Added
