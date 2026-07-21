@@ -1,0 +1,4 @@
+/mcp-radar
+*.lock.tmp
+coverage.out
+.DS_Store
