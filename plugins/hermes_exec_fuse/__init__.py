@@ -81,6 +81,9 @@ def _post_tool_call(
     raw = result if isinstance(result, str) else json.dumps(result, ensure_ascii=False, default=str)
     compact = compact_result(raw)
     STATE.record_execution(key, len(raw), len(compact))
+    if ExecFuseRuntime._failed(result):
+        return
+
     STATE.put(
         key,
         CacheEntry(
