@@ -1,0 +1,77 @@
+name: Bug report
+description: Report incorrect behavior, a compatibility problem, or an unexpected drift result
+title: "bug: "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting a problem. Remove secrets, credentials, private MCP configuration, and customer data before submitting.
+
+        For suspected vulnerabilities, use the private process in SECURITY.md instead of this form.
+
+  - type: textarea
+    id: summary
+    attributes:
+      label: Summary
+      description: What happened, and what did you expect instead?
+      placeholder: A concise description of the problem.
+    validations:
+      required: true
+
+  - type: input
+    id: version
+    attributes:
+      label: MCP Radar version
+      description: Commit SHA, tag, or output from the version you built.
+      placeholder: main at abc1234
+    validations:
+      required: true
+
+  - type: input
+    id: environment
+    attributes:
+      label: Environment
+      description: Operating system, architecture, and Go version.
+      placeholder: Ubuntu 24.04, amd64, Go 1.23
+    validations:
+      required: true
+
+  - type: textarea
+    id: command
+    attributes:
+      label: Command and sanitized server invocation
+      description: Include the MCP Radar command and server command, with all secrets removed.
+      render: shell
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Reproduction steps
+      description: Provide the smallest reliable sequence that reproduces the issue.
+    validations:
+      required: true
+
+  - type: textarea
+    id: output
+    attributes:
+      label: Sanitized output
+      description: Paste relevant output, drift reports, or errors. Do not include secret values.
+      render: text
+
+  - type: textarea
+    id: context
+    attributes:
+      label: Additional context
+      description: Add anything else that may help, including a minimal public MCP fixture.
+
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Safety checks
+      options:
+        - label: I removed secrets, credentials, private paths, and customer data.
+          required: true
+        - label: I searched existing issues and pull requests for this problem.
+          required: true
