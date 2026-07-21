@@ -147,3 +147,21 @@ def test_direct_terminal_hook_returns_cached_result():
     )
     assert directive["action"] == "block"
     assert "clean" in directive["message"]
+
+
+def test_direct_terminal_hook_does_not_cache_failed_result():
+    state = plugin.STATE
+    key = "failed-hook-session"
+    command = "git status --short"
+
+    plugin._post_tool_call(
+        tool_name="terminal",
+        args={"command": command},
+        result=json.dumps({"error": "terminal failed"}),
+        task_id=key,
+        duration_ms=10,
+    )
+
+    fingerprint = state.fingerprint(key, command, "", {})
+    assert state.get(key, fingerprint) is None
+    assert state.snapshot(key)["executed"] == 1
